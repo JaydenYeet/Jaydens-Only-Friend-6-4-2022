@@ -1,38 +1,42 @@
 #Jayden's Only Friend Python 3.10 Bot Version: 2.0
+#Tasks: Add Music, Add Protocals, Fix Chatbot, Fix Owner Bug, Add fight command, Add Valorant
+'''
+Devlog v1.9 Added more protocal commands and labled commands properly, Fixed fun.py
+Devlog v2.0 Added more image commands, Fixed giveaway.py, Merged covid.py and wiki.py and meme.py into api.py, Added more error handling
+'''
+
 '''
 ------------------------------------------------------Modules------------------------------------------------------
 '''
-import discord # For discord
-from discord.ext import commands, tasks # For discord
+
+import discord #For discord
+from discord.ext import commands, tasks #For discord
 from discord.ext.commands import MissingPermissions
-import os # For os
-import random # For random commands
-import datetime # For date and time commands
-import asyncio
-import json # For interacting with json files
-from dotenv import load_dotenv
-from googleapiclient.discovery import build # For the google command
-from PIL import Image #For image commands
+import os #For os
+import random #For random commands
+import datetime #For date and time commands
+import asyncio #For timing
+import json #For interacting with json files
+from dotenv import load_dotenv #For interacting with dotenv files
+from googleapiclient.discovery import build #For the google command
+from PIL import Image, ImageFont, ImageDraw #For image commands
 from io import BytesIO #For image commands
-import aiofiles # For files 
-import time # For time
-from pathlib import Path # For paths
-from pistonapi import PistonAPI # To run code
+import aiofiles #For files 
+import time #For time
+from pathlib import Path #For paths
+from pistonapi import PistonAPI #To run code
 import contextlib
-from urllib.parse import quote_plus # To add quotes
+from urllib.parse import quote_plus #To add quotes
 import randomstuff #For chatbot feature
-import python_weather # For weather command
+import python_weather #For weather command
+import wavelink #For music
+import traceback #For traceback
+import platform #For platform
 
 piston = PistonAPI()
 intents = discord.Intents.all()
 
-def get_prefix(client, message):
-    with open("prefix.json", "r") as f:
-        prefix = json.load(f)
-
-    return prefix[str(message.guild.id)]
-
-client = commands.Bot(command_prefix = "$" or when, intents = intents, case_insensitive = True, owner_id = 956015537291419660)
+client = commands.Bot(command_prefix = commands.when_mentioned_or('>'), intents = intents, case_insensitive = True, owner_id = 667664521577365514)
 
 class NewHelpName(commands.MinimalHelpCommand):
     async def send_pages(self):
@@ -62,53 +66,23 @@ def write_json(data, filename):
         json.dump(data, file, indent=4)
 
 @client.event
-async def on_ready(): 
+async def on_ready():
     change_status.start
     print(client.user)
     print("----------------I have connected to the server----------------")
     data = read_json("blacklist")
     client.blacklisted_users = data["blacklistedUsers"]
 
-@client.event
-async def on_guild_join(guild):
-    with open(f"prefix.json", "r") as f:
-        prefix = json.load(f)
-
-    prefix[str(guild.id)] = "$"
-
-    with open(f"prefix.json", "w") as f:
-        json.dump(prefix, f)
-
-@client.command()
-@commands.has_permissions(administrator=True)
-async def change_prefix(ctx, prefix):
-    with open(f"prefix.json", "r") as f:
-        prefix = json.load(f)
-
-    prefix[str(ctx.guild.id)] = prefix
-
-    with open(f"prefix.json", "w") as f:
-        json.dump(prefix, f)
-
-    await ctx.send(f"The prefix was changed to {prefix}.")
-
-status = ["Vibing to songs", "Eating Rice","Valorant", "Crying", "Sleeping Zz", "Coding", "Thinking about my life", "Watching anime"]
+status = ["Music", "Eating Rice","Valorant", "Crying", "Sleeping Zz", "Coding", "Thinking about my life", "Watching anime"]
 
 roasts = ["Your face makes onions cry.", "You are as useless as the ueue in queue.", "You are as useless as a white colour pencil.", "You must have born on the highway because thats where most accidents happen.", "If laughter was the best medicine, your face would cure the world.", "Your ass must jealous because of the amount of bullshit that came out of your mouth."]
 
 @tasks.loop(seconds=20)
 async def change_status():
-    await client.change_presence(activity.discord.Game(random.choice(status)))
+    await client.change_presence(discord.Game(random.choice(status)))
 
 @client.event
-async def on_message(message):
-    if message.mentions == client.user:
-        with open(f"prefix.json", "r") as f:
-            prefix = json.load(f)
-
-        pre = prefix[str(guild.id)]
-        await message.channel.send(f"My prefix for this server is {pre}.")
-
+async def on_message(message):            
     if message.author.id == client.user.id:
         return
 
@@ -128,42 +102,14 @@ async def on_message(message):
 
     await client.process_commands(message)
 
-@client.command()
-@commands.is_owner()
-@commands.cooldown(1, 3, commands.BucketType.user)
-async def blacklist(ctx, user: discord.Member):
-    if user == None:
-        await ctx.send("You need to mention a user for this to work!")
-        return
-
-    if ctx.message.author.id == user.id:
-        await ctx.send("Hey, you cannot blacklist yourself?")
-        return
-
-    client.blacklisted_users.append(user.id)
-    data = read_json("blacklist")
-    data["blacklistedUsers"].append(user.id)
-    write_json(data, "blacklist")
-    await ctx.send(f"I have blacklisted {user.name}.")
-
-@client.command()
-@commands.is_owner()
-@commands.cooldown(1, 3, commands.BucketType.user)
-async def unblacklist(ctx, user: discord.Member):
-    client.blacklisted_users.remove(user.id)
-    data = read_json("blacklist")
-    data["blacklistedUsers"].remove(user.id)
-    write_json(data, "blacklist")
-    await ctx.send(f"I have unblacklisted {user.name}.")
-
-@client.command()
+@client.command(name="ping", aliases=['latency'], help="Checks the bot's ping")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def ping(ctx):
     embed = discord.Embed(title="Bot Latency", description=f"Bot Latency: {round(client.latency * 1000)}ms", color=discord.Color.random(), timestamp=ctx.message.created_at)
-    embed.add_field(name="Bot Version: ", value="v1.9")
+    embed.add_field(name="Bot Version: ", value="v2.0")
     await ctx.send(embed=embed)
 
-@client.command()
+@client.command(name="uptime", help="Checks the bot's uptime")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def uptime(ctx):
     delta_uptime = datetime.datetime.utcnow() - client.launch_time
@@ -173,9 +119,58 @@ async def uptime(ctx):
     embed = discord.Embed(title="Bot Uptime⏱️,", color=discord.Color.random())
     embed.add_field(name=f"Jayden's Only Friend's Uptime:", value=f"{days}d, {hours}h, {minutes}m")
     await ctx.send(embed=embed)
+
 '''
 ------------------------------------------------------Testing Area------------------------------------------------------
 '''
+
+class Confirm(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.value = None
+
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
+    async def button_callback(self, button, interaction):
+        self.value = True
+        self.stop()
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
+    async def button_callback(self, button, interaction):
+        self.value = False
+        self.stop()
+
+@client.command()
+@commands.cooldown(1, 10, commands.BucketType.user)
+async def testbutton(ctx):
+    view = Confirm()
+    codes = ["e"]
+    await ctx.send("Establishing Connection....")
+    await ctx.send("Input Your Protocal Activation Code.")
+
+    def check(msg):
+        return msg.author == ctx.author and msg.channel == ctx.channel
+
+    try:
+        msg = await client.wait_for('message', timeout=20.0, check=check)
+    except asyncio.TimeoutError:
+        await ctx.send('You Didn\'t Answer In Time, Connection Closed.')
+        return
+    else:
+        for code in codes:
+            if msg.content == code:
+                await ctx.send("Do you want to continue?", view=view)
+                await view.wait()
+                if view.value is None:
+                    await ctx.send("You Didn\'t Answer In Time, Connection Closed.")
+                elif view.value:
+                    message2 = await ctx.send('Successfully Verified Protocal Activation Code. \nIntializing Protocol 1: Fire Insaneno')
+                    await asyncio.sleep(3)                   
+                    await message2.edit(content=f'Protocal Successfully Intialized, Target Has Been Neutralized.')
+                    return
+                else:
+                    continue
+            await ctx.send("Invalid Protocal Activation Code, Connection Closed.")
+            return
 
 '''
 ------------------------------------------------------Button Commands------------------------------------------------------
@@ -325,120 +320,16 @@ class TicTacToe(discord.ui.View):
 
         return None
 
-@client.command()
+@client.command(name="tic", help="Tic Tac Toe with buttons")
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def tic(ctx):
     await ctx.send("Tic Tac Toe: X goes first", view=TicTacToe())
 
-@client.command()
-@commands.cooldown(1, 5, commands.BucketType.user)
-async def guess(ctx):
-    number = random.randint(1, 3)
-    start = discord.Embed(title=f"{ctx.author}'s Number Guessing Game!", description="Try to guess the number by clicking on the buttons.", color=discord.Color.blue(), timestamp=ctx.message.created_at)
-    
-    win = discord.Embed(title=f"{ctx.author}, You Guessed It Right!", description="You won!", color=discord.Color.green(), timestamp=ctx.message.created_at)
-    
-    out = discord.Embed(title=f"{ctx.author}, You Didn't Respond On Time", description="Timed Out!", color=discord.Color.gold(), timestamp=ctx.message.created_at)
-    
-    lose = discord.Embed(title=f"{ctx.author}, You Lost!", description=f"The Number Was {number}", color=discord.Color.red(), timestamp=ctx.message.created_at)
-  
-    m = await ctx.send(embed=start, components=[[Button(style=1, label="1"), Button(style=3, label="2"), Button(style=ButtonStyle.red, label="3")]])
-
-    def check(res):
-        return ctx.author == res.user and res.channel == ctx.channel
-
-    try:
-        res = await client.wait_for("button_click", check=check, timeout=20)
-        if res.component.label == str(number):
-            await m.edit(embed=win, components=[])
-        else: 
-            await m.edit(embed=lose, components=[])
-            return
-
-    except asyncio.TimeoutError:
-        await m.edit(embed=out, components=[])
-
-def calculate(exp):
-    o = exp.replace('×', '*')
-    o = o.replace('÷', '/')
-    result = ''
-    try:
-        result = str(eval(o))
-    except:
-        result = 'An error occurred.'
-    return result
-
-@client.command(aliases=["calc"])
-@commands.cooldown(1, 3, commands.BucketType.user)
-async def calculator(ctx):
-    buttons = [
-    [
-        Button(style=ButtonStyle.grey, label='1'),
-        Button(style=ButtonStyle.grey, label='2'),
-        Button(style=ButtonStyle.grey, label='3'),
-        Button(style=ButtonStyle.blue, label='×'),
-        Button(style=ButtonStyle.red, label='Exit')
-    ],
-    [
-        Button(style=ButtonStyle.grey, label='4'),
-        Button(style=ButtonStyle.grey, label='5'),
-        Button(style=ButtonStyle.grey, label='6'),
-        Button(style=ButtonStyle.blue, label='÷'),
-        Button(style=ButtonStyle.red, label='←')
-    ],
-    [
-        Button(style=ButtonStyle.grey, label='7'),
-        Button(style=ButtonStyle.grey, label='8'),
-        Button(style=ButtonStyle.grey, label='9'),
-        Button(style=ButtonStyle.blue, label='+'),
-        Button(style=ButtonStyle.red, label='Clear')
-    ],
-    [
-        Button(style=ButtonStyle.grey, label='00'),
-        Button(style=ButtonStyle.grey, label='0'),
-        Button(style=ButtonStyle.grey, label='.'),
-        Button(style=ButtonStyle.blue, label='-'),
-        Button(style=ButtonStyle.green, label='=')
-    ],
-    ]
-    m = await ctx.send(content='Loading Calculator...')
-    expression = 'None'
-    delta = datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
-    e = discord.Embed(title=f'{ctx.author.name}\'s calculator | {ctx.author.id}', description=expression,
-                        timestamp=delta)
-    await m.edit(components=buttons, embed=e)
-    while m.created_at < delta:
-        res = await client.wait_for('button_click')
-        if res.author.id == int(res.message.embeds[0].title.split('|')[1]) and res.message.embeds[
-            0].timestamp < delta:
-            expression = res.message.embeds[0].description
-            if expression == 'None' or expression == 'An error occurred.':
-                expression = ''
-            if res.component.label == 'Exit':
-                await res.respond(content='Calculator Closed', type=7)
-                break
-            elif res.component.label == '←':
-                expression = expression[:-1]
-            elif res.component.label == 'Clear':
-                expression = 'None'
-            elif res.component.label == '=':
-                expression = calculate(expression)
-            else:
-                expression += res.component.label
-            f = discord.Embed(title=f'{res.author.name}\'s calculator|{res.author.id}', description=expression,
-                                timestamp=delta)
-            await res.respond(content='', embed=f, components=buttons, type=7)
-
-@client.command(aliases=["rr"])
-@commands.cooldown(1, 3, commands.BucketType.user)
-async def rickroll(ctx):
-    embed1 = discord.Embed(title=f"Free stuff alert!", description="You should click on a button for free stuff!", color=discord.Color.random(), timestamp=ctx.message.created_at)
-    await ctx.send(embed=embed1, components=[Button(style=5, url="https://youtu.be/OyNmzX22DHk", label="Robux"), Button(style=5, url="https://youtu.be/QxXcrTKmEGI", label="Vbucks"), Button(style=5, url="https://youtu.be/dQw4w9WgXcQ", label="Money")])
-
 '''
-------------------------------------------------------Odd Commands------------------------------------------------------
+------------------------------------------------------Misc Commands------------------------------------------------------
 '''
 
-@client.command()
+@client.command(name="run", help="Runs code")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def run(ctx, n, *, code):
   nm = n.lower()
@@ -483,7 +374,7 @@ async def run(ctx, n, *, code):
 
   await ctx.send(embed=em)
 
-@client.command()
+@client.command(name="google", aliases=['search'], help="Googles stuff")
 async def google(ctx, query: str):
     query = quote_plus(query)
     url = f'https://www.google.com/search?q={query}'
@@ -504,7 +395,7 @@ mainshop = [{"name":"Jett Bathwater", "price":69, "description":"Jetts Bath Wate
             {"name":"Prism Monitor X Ultra", "price":5000, "description":"Gaming Monitor RTX 6090"},
             {"name":"Gold Trophy", "price":99999, "description":"Flex On Em Normies"}]
 
-@client.command(aliases=["bal"])
+@client.command(name="balance", aliases=['bal'], help="Checks the users balance")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def balance(ctx, member: discord.Member = None):
     if member == None:
@@ -523,7 +414,7 @@ async def balance(ctx, member: discord.Member = None):
 
     await ctx.send(embed = balembed)
 
-@client.command()
+@client.command(name="beg", help="Begs for coins")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def beg(ctx):
     await open_account(ctx.author)
@@ -539,7 +430,7 @@ async def beg(ctx):
     with open("bank.json", "w") as f:
         json.dump(users, f, indent=4)
 
-@client.command()
+@client.command(name="withdraw", aliases=['with'], help="Withdraws your coins")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def withdraw(ctx, amount = None):
     await open_account(ctx.author)
@@ -570,7 +461,7 @@ async def withdraw(ctx, amount = None):
 
     await ctx.send(f"You withdrew {amount} coins.")
 
-@client.command(aliases = ["dep"])
+@client.command(name="deposit", aliases=['dep'], help="Deposits your coins")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def deposit(ctx, amount = None):
     await open_account(ctx.author)
@@ -601,7 +492,7 @@ async def deposit(ctx, amount = None):
 
     await ctx.send(f"You deposited {amount} coins.")
 
-@client.command(aliases = ["give"])
+@client.command(name="send", aliases=['share'], help="Share coins with other users")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def send(ctx, member : discord.Member, amount = None):
     await open_account(ctx.author)
@@ -627,7 +518,7 @@ async def send(ctx, member : discord.Member, amount = None):
     await update_bank(member, amount, 'wallet')
     await ctx.send(f'{ctx.author.mention} You gave {member} {amount} coins.')
 
-@client.command()
+@client.command(name="slots", help="Gambles your coins")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def slots(ctx,amount = None):
     await open_account(ctx.author)
@@ -666,7 +557,7 @@ async def slots(ctx,amount = None):
         loseembed.set_footer(icon_url = ctx.author.avatar.url, text = f"Loser Loser")
         await ctx.send(embed = loseembed)
 
-@client.command()
+@client.command(name="shop", help="Opens the shop")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def shop(ctx):
     em = discord.Embed(title = "Shop")
@@ -679,7 +570,7 @@ async def shop(ctx):
 
     await ctx.send(embed = em)
 
-@client.command()
+@client.command(name="buy", help="Buy stuff")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def buy(ctx, item, amount = 1):
     await open_account(ctx.author)
@@ -696,9 +587,9 @@ async def buy(ctx, item, amount = 1):
 
     await ctx.send(f"You just bought {amount} {item}.")
 
-@client.command(aliases = ["inventory"])
+@client.command(name="inventory", aliases=['inv'], help="Opens your inventory")
 @commands.cooldown(1, 5, commands.BucketType.user)
-async def inv(ctx):
+async def inventory(ctx):
     await open_account(ctx.author)
     user = ctx.author
     users = await get_bank_data()
@@ -765,7 +656,7 @@ async def buy_this(user, item_name, amount):
 
     return [True, "Worked"]
 
-@client.command()
+@client.command(name="sell", help="Sells items from your inventory")
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def sell(ctx, item, amount = 1):
     await open_account(ctx.author)
@@ -868,11 +759,10 @@ async def update_bank(user, change=0, mode="wallet"):
 '''
 
 @client.command()
-@commands.is_owner() 
-@commands.cooldown(1, 3, commands.BucketType.user)
+@commands.is_owner()
 async def load(ctx, extension):
     if extension == None:
-        await ctx.send("You have to input a name of a cog name bro")
+        await ctx.send("You have to input a cog.")
         return
     else:
         client.load_extension(f'cogs.{extension}')
@@ -885,19 +775,19 @@ async def test(ctx):
     await ctx.send("Test")
 
 @client.command()
-@commands.is_owner() 
+@commands.is_owner()
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def unload(ctx, extension):
     if extension == None:
-        await ctx.send("You have to input a cog name bro")
+        await ctx.send("You have to input a cog.")
         return
     else:
         client.unload_extension(f'cogs.{extension}')
         await ctx.send(f"Unloaded {extension}")
-
-for filename in os.listdir('./cogs'):
-    if filename.endswith('.py'):
-        client.load_extension(f'cogs.{filename[:-3]}')
+        
+    for filename in os.listdir('./cogs'):
+        if filename.endswith('.py'):
+            client.load_extension(f'cogs.{filename[:-3]}')
 
 @client.command()
 @commands.is_owner()
@@ -913,22 +803,50 @@ async def botstats(ctx):
 @commands.is_owner()
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def logout(ctx):
-    await ctx.send(f"Hey {ctx.author.mention}, I am now logging out")
+    await ctx.send(f"I am now logging out.")
     await client.logout()
+    
+@client.command(name="blacklist", aliases=['bl'], help="Blacklists the specified user")
+@commands.is_owner()
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def blacklist(ctx, user: discord.Member):
+    if user == None:
+        await ctx.send("You need to mention a user for this to work.")
+        return
+
+    if ctx.message.author.id == user.id:
+        await ctx.send("Hey, you cannot blacklist yourself?")
+        return
+
+    client.blacklisted_users.append(user.id)
+    data = read_json("blacklist")
+    data["blacklistedUsers"].append(user.id)
+    write_json(data, "blacklist")
+    await ctx.send(f"I have blacklisted {user.name}.")
+
+@client.command(name="unblacklist", aliases=['ubl'], help="Unblacklists the specified user")
+@commands.is_owner()
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def unblacklist(ctx, user: discord.Member):
+    client.blacklisted_users.remove(user.id)
+    data = read_json("blacklist")
+    data["blacklistedUsers"].remove(user.id)
+    write_json(data, "blacklist")
+    await ctx.send(f"I have unblacklisted {user.name}.")
 
 '''
 ------------------------------------------------------Image Commands------------------------------------------------------
 '''
 
-@client.command()
+@client.command(name="wanted")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def wanted(ctx, user: discord.Member = None):
     if user == None:
         user = ctx.author
 
-    wanted = Image.open("wanted 2.jpg")
+    wanted = Image.open("wanted.jpg")
 
-    asset = user.avatar.url_as(size = 128)
+    asset = user.avatar.with_size(128)
     data = BytesIO(await asset.read())
     pfp = Image.open(data)
 
@@ -941,7 +859,7 @@ async def wanted(ctx, user: discord.Member = None):
     out.seek(0)
     await ctx.send(file=discord.File(out, filename='profile.png'))
 
-@client.command()
+@client.command(name="birthday")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def birthday(ctx, user: discord.Member = None):
     if user == None:
@@ -949,7 +867,7 @@ async def birthday(ctx, user: discord.Member = None):
 
     birthday = Image.open("birthday.png")
 
-    asset = user.avatar.url_as(size = 128)
+    asset = user.avatar.with_size(128)
     data = BytesIO(await asset.read())
     pfp = Image.open(data)
 
@@ -962,7 +880,7 @@ async def birthday(ctx, user: discord.Member = None):
     out.seek(0)
     await ctx.send(file=discord.File(out, filename='profile.png'))
 
-@client.command()
+@client.command(name="rip")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def rip(ctx, user: discord.Member = None):
     if user == None:
@@ -970,7 +888,7 @@ async def rip(ctx, user: discord.Member = None):
 
     rip = Image.open("rip.jpg")
 
-    asset = user.avatar.url_as(size = 128)
+    asset = user.avatar.with_size(128)
     data = BytesIO(await asset.read())
     pfp = Image.open(data)
 
@@ -983,7 +901,7 @@ async def rip(ctx, user: discord.Member = None):
     out.seek(0)
     await ctx.send(file=discord.File(out, filename='profile.png'))
 
-@client.command()
+@client.command(name="monke")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def monke(ctx, user: discord.Member = None):
     if user == None:
@@ -991,7 +909,7 @@ async def monke(ctx, user: discord.Member = None):
 
     monke = Image.open("monke2.png")
 
-    asset = user.avatar.url_as(size = 128)
+    asset = user.avatar.with_size(128)
     data = BytesIO(await asset.read())
     pfp = Image.open(data)
 
@@ -1004,21 +922,21 @@ async def monke(ctx, user: discord.Member = None):
     out.seek(0)
     await ctx.send(file=discord.File(out, filename='profile.png'))
 
-@client.command()
+@client.command(name="slap")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def slap(ctx, user: discord.Member = None):
     if user == None:
         await ctx.send("You need to mention a user for this to work!")
 
-    slap = Image.open("slap (2).jpg)")
+    slap = Image.open("slap.jpg")
 
-    asset = ctx.author.avatar.url_as(size = 128)
+    asset = ctx.author.avatar.with_size(128)
     data = BytesIO(await asset.read())
     pfp = Image.open(data)
 
     pfp = pfp.resize((100, 100))
 
-    asset2 = user.avatar.url_as(size = 128)
+    asset2 = user.avatar.with_size(128)
     data2 = BytesIO(await asset2.read())
     pfp2 = Image.open(data2)
 
@@ -1032,7 +950,7 @@ async def slap(ctx, user: discord.Member = None):
     out.seek(0)
     await ctx.send(file=discord.File(out, filename='profile.png'))
 
-@client.command()
+@client.command(name="stonk")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def stonk(ctx, user: discord.Member = None):
     if user == None:
@@ -1040,7 +958,7 @@ async def stonk(ctx, user: discord.Member = None):
 
     stonk = Image.open("stonk.jpg")
 
-    asset = user.avatar.url_as(size = 128)
+    asset = user.avatar.with_size(128)
     data = BytesIO(await asset.read())
     pfp = Image.open(data)
 
@@ -1052,8 +970,50 @@ async def stonk(ctx, user: discord.Member = None):
     stonk.save(out, format='PNG')
     out.seek(0)
     await ctx.send(file=discord.File(out, filename='profile.png'))
+    
+@client.command(name="buisness")
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def buisness(ctx, user: discord.Member = None):
+    if user == None:
+        user = ctx.author
 
-@client.command()
+    buisness = Image.open("buisness.jpg")
+
+    asset = user.avatar.with_size(128)
+    data = BytesIO(await asset.read())
+    pfp = Image.open(data)
+
+    pfp = pfp.resize((53, 53))
+
+    buisness.paste(pfp, (100, 1))
+
+    out = BytesIO()
+    buisness.save(out, format='PNG')
+    out.seek(0)
+    await ctx.send(file=discord.File(out, filename='profile.png'))
+    
+@client.command(name="clown")
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def clown(ctx, user: discord.Member = None):
+    if user == None:
+        user = ctx.author
+
+    clown = Image.open("clown.jpg")
+
+    asset = user.avatar.with_size(128)
+    data = BytesIO(await asset.read())
+    pfp = Image.open(data)
+
+    pfp = pfp.resize((69, 69))
+
+    clown.paste(pfp, (70, 32))
+
+    out = BytesIO()
+    clown.save(out, format='PNG')
+    out.seek(0)
+    await ctx.send(file=discord.File(out, filename='profile.png'))
+
+@client.command(name="punch")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def punch(ctx, user: discord.Member = None):
     if user == None:
@@ -1061,13 +1021,13 @@ async def punch(ctx, user: discord.Member = None):
 
     punch = Image.open("punch.png")
 
-    asset = ctx.author.avatar.url_as(size = 128)
+    asset = ctx.author.avatar.with_size(128)
     data = BytesIO(await asset.read())
     pfp = Image.open(data)
 
     pfp = pfp.resize((155, 155))
 
-    asset2 = user.avatar.url_as(size = 128)
+    asset2 = user.avatar.with_size(128)
     data2 = BytesIO(await asset2.read())
     pfp2 = Image.open(data2)
 
@@ -1081,7 +1041,7 @@ async def punch(ctx, user: discord.Member = None):
     out.seek(0)
     await ctx.send(file=discord.File(out, filename='profile.png'))
 
-@client.command()
+@client.command(name="marry")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def marry(ctx, user: discord.Member = None):
     if user == None:
@@ -1089,13 +1049,13 @@ async def marry(ctx, user: discord.Member = None):
 
     marry = Image.open("marry.png")
 
-    asset = ctx.author.avatar.url_as(size = 128)
+    asset = ctx.author.avatar.with_size(128)
     data = BytesIO(await asset.read())
     pfp = Image.open(data)
 
     pfp = pfp.resize((55, 55))
 
-    asset2 = user.avatar.url_as(size = 128)
+    asset2 = user.avatar.with_size(128)
     data2 = BytesIO(await asset2.read())
     pfp2 = Image.open(data2)
 
@@ -1109,21 +1069,21 @@ async def marry(ctx, user: discord.Member = None):
     out.seek(0)
     await ctx.send(file=discord.File(out, filename='profile.png'))
 
-@client.command()
+@client.command(name="kill")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def kill(ctx, user: discord.Member = None):
     if user == None:
         await ctx.send("You need to mention a user for this to work!")
 
-    kill = Image.open("killing (1).jpg")
+    kill = Image.open("killing.jpg")
 
-    asset = ctx.author.avatar.url_as(size = 128)
+    asset = ctx.author.avatar.with_size(128)
     data = BytesIO(await asset.read())
     pfp = Image.open(data)
 
     pfp = pfp.resize((186, 186))
 
-    asset2 = user.avatar.url_as(size = 128)
+    asset2 = user.avatar.with_size(128)
     data2 = BytesIO(await asset2.read())
     pfp2 = Image.open(data2)
 
@@ -1136,8 +1096,36 @@ async def kill(ctx, user: discord.Member = None):
     kill.save(out, format='PNG')
     out.seek(0)
     await ctx.send(file=discord.File(out, filename='profile.png'))
+    
+@client.command(name="highground")
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def highground(ctx, user: discord.Member = None):
+    if user == None:
+        await ctx.send("You need to mention a user for this to work!")
 
-@client.command()
+    punch = Image.open("highground.jpg")
+
+    asset = ctx.author.avatar.with_size(128)
+    data = BytesIO(await asset.read())
+    pfp = Image.open(data)
+
+    pfp = pfp.resize((132, 132))
+
+    asset2 = user.avatar.with_size(128)
+    data2 = BytesIO(await asset2.read())
+    pfp2 = Image.open(data2)
+
+    pfp2 = pfp2.resize((322, 322))
+
+    punch.paste(pfp, (504, 28))
+    punch.paste(pfp2, (250, 433))
+
+    out = BytesIO()
+    punch.save(out, format='PNG')
+    out.seek(0)
+    await ctx.send(file=discord.File(out, filename='profile.png'))
+
+@client.command(name="googleimg", help="Googles images")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def googleimg(ctx, *, search):
     ran = random.randint(0, 9)
@@ -1148,6 +1136,14 @@ async def googleimg(ctx, *, search):
     url = result["items"][ran]["link"]
     embed = discord.Embed(title=f"Here Is Your Image ({search.title()})")
     embed.set_image(url=url)
+    await ctx.send(embed=embed)
+    
+@client.command(name="achievement", help="Sends a Minecraft achievement")
+@commands.cooldown(1, 3, commands.BucketType.user)
+async def achievement(ctx, *, text):
+    random = random.randint(1, 40)
+    embed = discord.Embed(color=discord.Colour.random())
+    embed.set_image(url=f"https://minecraftskinstealer.com/achievement/{random}/Achievement+Get%21/{text}")
     await ctx.send(embed=embed)
 
 '''
@@ -1172,7 +1168,7 @@ winningConditions = [
     [2, 4, 6]
 ]
 
-@client.command(aliases=['ttt'])
+@client.command(name="tictactoe", aliases=['ttt'])
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def tictactoe(ctx, p1: discord.Member, p2: discord.Member):
     global count
@@ -1215,7 +1211,7 @@ async def tictactoe(ctx, p1: discord.Member, p2: discord.Member):
     else:
         await ctx.send("A game is already in progress! Finish it before starting a new one.")
 
-@client.command()
+@client.command(name="place")
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def place(ctx, pos: int):
     global turn
@@ -1275,7 +1271,7 @@ async def tictactoe_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("Please mention 2 players for this command.")
     elif isinstance(error, commands.BadArgument):
-        await ctx.send("Please make sure to mention/ping players (ie. <@688534433879556134>).")
+        await ctx.send("Please make sure to mention players.")
     else:
         raise error
 
@@ -1287,110 +1283,6 @@ async def place_error(ctx, error):
         await ctx.send("Please make sure to enter an integer.")
     else:
         raise error
-
-'''
-------------------------------------------------------Giveaway Commands------------------------------------------------------
-'''
-
-def convert(time):
-    pos = ["s","m","h","d"]
-
-    time_dict = {"s" : 1, "m" : 60, "h" : 3600 , "d" : 3600*24}
-
-    unit = time[-1]
-
-    if unit not in pos:
-        return -1
-    try:
-        val = int(time[:-1])
-    except:
-        return -2
-
-    return val * time_dict[unit]
-
-@client.command(aliases=["gstart"])
-@commands.cooldown(1, 10, commands.BucketType.user)
-async def giveaway(ctx):
-    await ctx.send("Let's start the giveaway! Answer these questions within 20 seconds!")
-
-    questions = ["Which channel should it be hosted in?", 
-                "What should be the duration of the giveaway? (s|m|h|d)",
-                "What is the prize of the giveaway?"]
-
-    answers = []
-
-    def check(m):
-        return m.author == ctx.author and m.channel == ctx.channel 
-
-    for i in questions:
-        await ctx.send(i)
-
-        try:
-            msg = await client.wait_for('message', timeout=20.0, check=check)
-        except asyncio.TimeoutError:
-            await ctx.send('You didn\'t answer in time, please be quicker next time!')
-            return
-        else:
-            answers.append(msg.content)
-
-    try:
-        c_id = int(answers[0][2:-1])
-    except:
-        await ctx.send(f"You didn't mention a channel properly. Do it like this {ctx.channel.mention} next time.")
-        return
-
-    channel = client.get_channel(c_id)
-
-    time = convert(answers[1])
-    if time == -1:
-        await ctx.send(f"You didn't answer the time with a proper unit. Use (s|m|h|d) next time!")
-        return
-    elif time == -2:
-        await ctx.send(f"The time must be an integer. Please enter an integer next time")
-        return            
-
-    prize = answers[2]
-
-    await ctx.send(f"The Giveaway will be in {channel.mention} and will last {answers[1]}!")
-
-    embed1 = discord.Embed(title = "Giveaway!", description = f"{prize}", color = discord.Colour.random(), timestamp=ctx.message.created_at)
-
-    embed1.add_field(name = "Hosted by:", value = ctx.author.mention)
-
-    embed1.set_footer(text = f"Ends {answers[1]} from now!")
-
-    my_msg = await channel.send(embed = embed1)
-
-    await my_msg.add_reaction("🎉")
-
-    await asyncio.sleep(time)
-
-    new_msg = await channel.fetch_message(my_msg.id)
-
-    users = await new_msg.reactions[0].users().flatten()
-    users.pop(users.index(client.user))
-
-    winner = random.choice(users)
-
-    winembed = discord.Embed(title=f" <a:tadayellow_ss:873100429041467412>Giveaway for {prize} is over!<a:tadayellow_ss:873100429041467412>", description=f"{winner.mention} won the giveaway for {prize}!", color=discord.Color.gold(), timestamp=ctx.message.created_at)
-
-    await my_msg.edit(embed=winembed)
-
-@client.command()
-@commands.cooldown(1, 3, commands.BucketType.user)
-async def reroll(ctx, channel : discord.TextChannel, id_ : int):
-    try:
-        new_msg = await channel.fetch_message(id_)
-    except:
-        await ctx.send("The id was entered incorrectly.")
-        return
-    
-    users = await new_msg.reactions[0].users().flatten()
-    users.pop(users.index(client.user))
-
-    winner = random.choice(users)
-
-    await channel.send(f"Congratulations! The new winner is {winner.mention}!")
 
 '''
 ------------------------------------------------------Error Handling------------------------------------------------------
@@ -1421,11 +1313,17 @@ async def on_command_error(ctx, error):
         return await ctx.send('Only The Bot Owner: notjayden#1919 Can Use This Command.')
 
     if isinstance(error, commands.MemberNotFound):
-        return await ctx.send('I cannot find this member.')
+        return await ctx.send('I cannot find this user.')
 
     else:
         raise error
 
 load_dotenv()
-token = os.environ.get("DISCORD_TOKEN") 
+token = os.environ.get("DISCORD_TOKEN")
+for filename in os.listdir('./cogs'):
+        if filename.endswith('.py'):
+            try:
+                client.load_extension(f'cogs.{filename[:-3]}')
+            except Exception as e:
+                traceback.print_exc()
 client.run(token)
